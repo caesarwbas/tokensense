@@ -597,7 +597,7 @@ function SettingsPanel({ user, apiKey, onLogout, onUpgrade, onShowApiModal, C })
 export default function TokenSense() {
   const [dark, setDark]   = useState(false);
   const C = dark ? DARK : LIGHT;
-  const card = { background:C.cardBg,borderRadius:14,border:`1px solid ${C.border}`,padding:"22px 24px`,boxShadow:dark?"0 1px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)" };
+  const card = { background:C.cardBg,borderRadius:14,border:`1px solid ${C.border}`,padding:"22px 24px",boxShadow:dark?"0 1px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)" };
 
   const [user, setUser]     = useState(null);
   const [apiKey, setApiKey] = useState(()=>{ try{ return localStorage.getItem("ts_key")||""; }catch{ return ""; } });
