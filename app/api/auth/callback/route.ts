@@ -1,7 +1,4 @@
 // app/api/auth/callback/route.ts
-// Handles Supabase email confirmation redirect.
-// Supabase sends users here after clicking the confirmation link in their email.
-
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -12,34 +9,40 @@ export async function GET(req: NextRequest) {
   const next  = searchParams.get("next") ?? "/";
   const error = searchParams.get("error");
 
-  // Handle error from Supabase (e.g. expired link)
   if (error) {
-    console.error("[auth/callback] Supabase error:", error, searchParams.get("error_description"));
     return NextResponse.redirect(`${origin}/?error=link_expired`);
   }
 
   if (code) {
-    const cookieStore = cookies();
+    // Next.js 15: cookies() must be awaited
+    const cookieStore = await cookies();
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get:    (name: string) => cookieStore.get(name)?.value,
-          set:    (name: string, value: string, options: Record<string, unknown>) => cookieStore.set({ name, value, ...options }),
-          remove: (name: string, options: Record<string, unknown>) => cookieStore.set({ name, value: "", ...options }),
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {}
+          },
         },
       }
     );
 
-    // Exchange the code for a session
     const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!sessionError) {
       return NextResponse.redirect(`${origin}${next}`);
     }
 
-    console.error("[auth/callback] Session exchange failed:", sessionError);
+    console.error("[auth/callback] Session exchange failed:", sessionError.message);
   }
 
   return NextResponse.redirect(`${origin}/?error=auth_failed`);
