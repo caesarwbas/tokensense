@@ -9,13 +9,13 @@ import { cookies } from "next/headers";
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const code  = searchParams.get("code");
-  const next  = searchParams.get("next") ?? "/dashboard";
+  const next  = searchParams.get("next") ?? "/";
   const error = searchParams.get("error");
 
   // Handle error from Supabase (e.g. expired link)
   if (error) {
     console.error("[auth/callback] Supabase error:", error, searchParams.get("error_description"));
-    return NextResponse.redirect(`${origin}/login?error=link_expired`);
+    return NextResponse.redirect(`${origin}/?error=link_expired`);
   }
 
   if (code) {
@@ -27,9 +27,7 @@ export async function GET(req: NextRequest) {
         cookies: {
           get:    (name: string) => cookieStore.get(name)?.value,
           set:    (name: string, value: string, options: Record<string, unknown>) => cookieStore.set({ name, value, ...options }),
-
           remove: (name: string, options: Record<string, unknown>) => cookieStore.set({ name, value: "", ...options }),
-
         },
       }
     );
@@ -44,5 +42,5 @@ export async function GET(req: NextRequest) {
     console.error("[auth/callback] Session exchange failed:", sessionError);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  return NextResponse.redirect(`${origin}/?error=auth_failed`);
 }
