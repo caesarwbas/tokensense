@@ -1,6 +1,6 @@
 // app/api/auth/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
   }
 
   if (code) {
-    // Next.js 15: cookies() must be awaited
     const cookieStore = await cookies();
 
     const supabase = createServerClient(
@@ -25,10 +24,10 @@ export async function GET(req: NextRequest) {
           getAll() {
             return cookieStore.getAll();
           },
-          setAll(cookiesToSet) {
+          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
+                cookieStore.set(name, value, options as any)
               );
             } catch {}
           },
