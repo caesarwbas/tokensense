@@ -313,25 +313,13 @@ function AuthModal({ mode: init, onClose, onAuth, C }) {
 
 // ─── API Key Modal ────────────────────────────────────────────────────────────
 function ApiKeyModal({ existing, onClose, onSave, userId, C }) {
-  const [key, setKey]       = useState(existing || "");
-  const [status, setStatus] = useState(null);
+  const [key, setKey] = useState(existing || "");
+  const [saving, setSaving] = useState(false);
   const masked = existing ? `sk-ant-…${existing.slice(-6)}` : null;
-
-  const test = async () => {
-    if (!key.startsWith("sk-ant-")) { setStatus("error"); return; }
-    setStatus("testing");
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 10, messages: [{ role: "user", content: "hi" }] }),
-      });
-      setStatus(res.ok ? "ok" : "error");
-    } catch { setStatus("error"); }
-  };
+  const validFormat = key.startsWith("sk-ant-") && key.length > 20;
 
   const save = async () => {
-    // Save to Supabase profiles table
+    setSaving(true);
     if (userId) {
       await supabase.from("profiles").update({ anthropic_api_key: key }).eq("id", userId);
     }
@@ -363,21 +351,12 @@ function ApiKeyModal({ existing, onClose, onSave, userId, C }) {
           Currently active: {masked} ● Live
         </div>
       )}
-      <Field C={C} label="Your Anthropic API Key" value={key} onChange={v=>{setKey(v);setStatus(null);}}
+      <Field C={C} label="Your Anthropic API Key" value={key} onChange={setKey}
         placeholder="sk-ant-api03-…" icon="🔑"
-        error={status==="error"?"Key invalid — check format and try again":null}
-        hint={status==="ok"?"✓ Connection verified! Click Save to enable.":null} />
-      {status==="ok" && (
-        <div style={{ background:C.surface,border:`1px solid ${C.green}44`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,color:C.green,fontWeight:700 }}>
-          ✅ API key verified — live usage data will be enabled.
-        </div>
-      )}
-      <div style={{ display:"flex",gap:10 }}>
-        <Btn C={C} onClick={test} variant="outline" disabled={!key||status==="testing"} style={{ flex:1 }}>
-          {status==="testing"?"Testing…":"Test Key"}
-        </Btn>
-        <Btn C={C} onClick={save} disabled={!key} style={{ flex:1 }}>Save & Connect</Btn>
-      </div>
+        hint={validFormat ? "✓ Format looks correct — click Save to connect." : "Your key starts with sk-ant-"} />
+      <Btn C={C} onClick={save} disabled={!validFormat || saving} style={{ width:"100%", padding:"13px 0" }}>
+        {saving ? "Saving…" : "Save & Connect"}
+      </Btn>
     </Overlay>
   );
 }
