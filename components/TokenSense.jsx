@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 // ─── Real Supabase client ─────────────────────────────────────────────────────
-const supabase = createBrowserClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  { auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true } }
 );
 
 const Fonts = () => (
@@ -211,7 +212,7 @@ function AuthModal({ mode: init, onClose, onAuth, C }) {
     setGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { redirectTo: `${window.location.origin}` },
     });
     if (error) { setErrors({ form: error.message }); setGoogleLoading(false); }
     // On success, browser redirects to Google — nothing else needed here
@@ -629,7 +630,7 @@ export default function TokenSense() {
 
     // Listen to auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session) {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
         const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
         const u = { id: session.user.id, email: session.user.email, name: profile?.name || session.user.email.split("@")[0], plan: profile?.plan || "free", org_id: profile?.org_id || null };
         setUser(u);
