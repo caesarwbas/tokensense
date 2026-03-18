@@ -1,8 +1,4 @@
-'use client'
-import dynamic from 'next/dynamic'
-
-const TokenSense = dynamic(() => import('@/components/TokenSense'), { ssr: false })
-
+import TokenSense from "@/components/TokenSense";
 export default function Home() {
-  return <TokenSense />
+  return <TokenSense />;
 }
