@@ -363,37 +363,34 @@ function ApiKeyModal({ existing, onClose, onSave, userId, C }) {
 
 // ─── Checkout Modal ───────────────────────────────────────────────────────────
 function CheckoutModal({ plan, onClose, onSuccess, C }) {
-  const [step, setStep] = useState("confirm");
   const isPro = plan === "pro";
+  const price = isPro ? 19 : 79;
   const gradient = isPro ? "linear-gradient(135deg,#0369a1,#6366f1)" : "linear-gradient(135deg,#5b21b6,#db2777)";
   const glow     = isPro ? "rgba(3,105,161,0.4)" : "rgba(91,33,182,0.4)";
   const features = isPro
-    ? ["All 3 Claude models","Live API token tracking","Session checkpoints","Compact watchdog alerts","Export reports"]
+    ? ["All 3 Claude models","Usage report dashboard","Session checkpoints","Compact watchdog alerts","Export reports"]
     : ["Everything in Pro","Team admin panel","25 developers","Per-dev cost dashboard","Slack + GitHub alerts","SSO"];
 
-  const checkout = async () => {
-    setStep("processing");
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-      else { setStep("confirm"); }
-    } catch { setStep("confirm"); }
+  // Open Transak — works in Turkey, accepts Apple Pay, cards, crypto
+  const checkout = () => {
+    const WALLET = "0x18d8c908c073f2eacfba91f05335e874d20ec1ed";
+    const TRANSAK_KEY = "cf42971a-6379-4623-9f37-293678096237";
+    const params = new URLSearchParams({
+      apiKey: TRANSAK_KEY,
+      cryptoCurrencyCode: "USDT",
+      networks: "polygon",
+      walletAddress: WALLET,
+      fiatAmount: String(price),
+      fiatCurrency: "USD",
+      defaultPaymentMethod: "apple_pay",
+      themeColor: "000000",
+      redirectURL: window.location.origin,
+    });
+    window.open("https://global.transak.com/?" + params.toString(), "_blank", "width=450,height=700");
+    // After payment, user comes back and we upgrade their plan manually
+    // TODO: wire Transak webhook to auto-upgrade plan
+    onSuccess(plan);
   };
-
-  if (step === "processing") return (
-    <Overlay onClose={null} C={C}>
-      <div style={{ textAlign:"center",padding:"40px 0" }}>
-        <div style={{ width:64,height:64,borderRadius:"50%",background:gradient,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 18px",animation:"spin 1.2s linear infinite" }}>⚙️</div>
-        <div style={{ fontSize:18,fontWeight:800,fontFamily:"'Syne',sans-serif",color:C.ink,marginBottom:6 }}>Redirecting to Stripe…</div>
-        <div style={{ fontSize:14,color:C.muted,fontFamily:"'Epilogue',sans-serif",fontWeight:600 }}>You'll be taken to secure checkout</div>
-      </div>
-    </Overlay>
-  );
 
   return (
     <Overlay onClose={onClose} C={C}>
@@ -403,10 +400,10 @@ function CheckoutModal({ plan, onClose, onSuccess, C }) {
           <div>
             <div style={{ fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.7)",letterSpacing:"0.12em",fontFamily:"'Syne',sans-serif",marginBottom:6 }}>TOKENSENSE {isPro?"PRO":"TEAM"}</div>
             <div style={{ display:"flex",alignItems:"flex-end",gap:4 }}>
-              <span style={{ fontSize:44,fontWeight:800,fontFamily:"'Syne',sans-serif",color:"#fff",lineHeight:1 }}>{isPro?"$19":"$79"}</span>
+              <span style={{ fontSize:44,fontWeight:800,fontFamily:"'Syne',sans-serif",color:"#fff",lineHeight:1 }}>${price}</span>
               <span style={{ fontSize:15,color:"rgba(255,255,255,0.7)",marginBottom:7 }}>/month</span>
             </div>
-            <div style={{ fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4,fontWeight:600 }}>Cancel anytime · No hidden fees</div>
+            <div style={{ fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4,fontWeight:600 }}>One-time · No subscription yet</div>
           </div>
           <span onClick={onClose} style={{ cursor:"pointer",fontSize:24,color:"rgba(255,255,255,0.7)" }}>×</span>
         </div>
@@ -422,16 +419,25 @@ function CheckoutModal({ plan, onClose, onSuccess, C }) {
           </div>
         ))}
       </div>
-      <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 16px",marginBottom:20,fontSize:13,color:C.mid,display:"flex",gap:8,alignItems:"center",fontWeight:600 }}>
-        <span>🔒</span><span>Redirected to <strong style={{ color:C.ink }}>Stripe's secure checkout</strong> — we never store card details.</span>
+
+      {/* Payment methods */}
+      <div style={{ display:"flex",gap:8,marginBottom:16 }}>
+        {["🍎 Apple Pay","💳 Card","🏦 Bank Transfer","₿ Crypto"].map(m=>(
+          <div key={m} style={{ flex:1,padding:"8px 4px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,textAlign:"center",fontSize:11,color:C.mid,fontFamily:"'Epilogue',sans-serif",fontWeight:600 }}>{m}</div>
+        ))}
       </div>
+
+      <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 16px",marginBottom:20,fontSize:13,color:C.mid,display:"flex",gap:8,alignItems:"center",fontWeight:600 }}>
+        <span>🔒</span><span>Powered by <strong style={{ color:C.ink }}>Transak</strong> — works in 160+ countries including Turkey. No crypto wallet needed.</span>
+      </div>
+
       <button onClick={checkout} style={{ width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:gradient,color:"#fff",fontSize:15,fontWeight:800,fontFamily:"'Syne',sans-serif",cursor:"pointer",boxShadow:`0 4px 22px ${glow}`,transition:"transform 0.15s" }}
         onMouseOver={e=>e.currentTarget.style.transform="translateY(-2px)"}
         onMouseOut={e=>e.currentTarget.style.transform=""}>
-        Continue to Checkout →
+        Pay ${price} with Apple Pay / Card →
       </button>
       <div style={{ marginTop:10,textAlign:"center",fontSize:12,color:C.muted,fontFamily:"'Epilogue',sans-serif",fontWeight:600 }}>
-        💳 Powered by Stripe · 256-bit SSL · Cancel anytime
+        Accepts Apple Pay · Credit card · Bank transfer · Crypto
       </div>
     </Overlay>
   );
@@ -642,7 +648,7 @@ export default function TokenSense() {
 
   const handleUpgrade = (plan) => {
     if (!user) { setModal("auth-signup"); return; }
-    setModal(plan === "team" ? "waitlist" : `stripe-${plan}`);
+    setModal(`stripe-${plan}`);
   };
 
   const handleStripeSuccess = (plan) => {
